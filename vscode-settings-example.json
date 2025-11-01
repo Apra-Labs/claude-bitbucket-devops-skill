@@ -1,0 +1,16 @@
+{
+  "mcp.servers": {
+    "bitbucket": {
+      "command": "node",
+      "args": [
+        "/FULL/PATH/TO/bitbucket-mcp/dist/index.js"
+      ],
+      "env": {
+        "BITBUCKET_URL": "https://api.bitbucket.org/2.0",
+        "BITBUCKET_WORKSPACE": "your-workspace-name",
+        "BITBUCKET_USERNAME": "your.email@example.com",
+        "BITBUCKET_PASSWORD": "your-app-password-here"
+      }
+    }
+  }
+}
