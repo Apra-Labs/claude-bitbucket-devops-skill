@@ -1,4 +1,4 @@
-# Contributing to Claude Bitbucket Pipelines Skill
+# Contributing to Claude Bitbucket DevOps Skill
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to this project.
 
@@ -34,8 +34,8 @@ We welcome pull requests! Here's the process:
 
 ```bash
 # Fork the repo on GitHub, then:
-git clone https://github.com/YOUR_USERNAME/claude-bitbucket-pipelines-skill.git
-cd claude-bitbucket-pipelines-skill
+git clone https://github.com/YOUR_USERNAME/claude-bitbucket-devops-skill.git
+cd claude-bitbucket-devops-skill
 ```
 
 #### 2. Create a Branch
@@ -66,10 +66,10 @@ git checkout -b fix/your-bug-fix
 1. Install the modified skill in your local Claude Code:
    ```bash
    # Windows
-   copy SKILL.md %USERPROFILE%\.claude\skills\bitbucket-pipeline-debug\
+   copy SKILL.md %USERPROFILE%\.claude\skills\bitbucket-devops\
 
    # macOS/Linux
-   cp SKILL.md ~/.claude/skills/bitbucket-pipeline-debug/
+   cp SKILL.md ~/.claude/skills/bitbucket-devops/
    ```
 
 2. Restart VSCode/Claude Code
@@ -107,9 +107,9 @@ git push origin feature/your-feature-name
 
 ```markdown
 ---
-name: bitbucket-pipeline-debug
+name: bitbucket-devops
 description: Brief, keyword-rich description
-allowed-tools: mcp__bitbucket-mcp__*
+allowed-tools: Bash, Read, Write, Grep, Glob
 ---
 
 # Title
@@ -200,8 +200,8 @@ All contributors will be recognized in the project. By contributing, you agree:
 
 ## Questions?
 
-- **General questions**: [GitHub Discussions](https://github.com/Apra-Labs/claude-bitbucket-pipelines-skill/discussions)
-- **Bug reports**: [GitHub Issues](https://github.com/Apra-Labs/claude-bitbucket-pipelines-skill/issues)
+- **General questions**: [GitHub Discussions](https://github.com/Apra-Labs/claude-bitbucket-devops-skill/discussions)
+- **Bug reports**: [GitHub Issues](https://github.com/Apra-Labs/claude-bitbucket-devops-skill/issues)
 - **Security issues**: Email security@apralabs.com (if applicable)
 
 ## Development Setup
@@ -218,7 +218,7 @@ All contributors will be recognized in the project. By contributing, you agree:
 1. Clone both repositories:
    ```bash
    git clone https://github.com/MatanYemini/bitbucket-mcp.git
-   git clone https://github.com/Apra-Labs/claude-bitbucket-pipelines-skill.git
+   git clone https://github.com/Apra-Labs/claude-bitbucket-devops-skill.git
    ```
 
 2. Setup bitbucket-mcp:
@@ -234,10 +234,10 @@ All contributors will be recognized in the project. By contributing, you agree:
    ```bash
    # Link to skills directory
    # Windows:
-   mklink /D %USERPROFILE%\.claude\skills\bitbucket-pipeline-debug claude-bitbucket-pipelines-skill
+   mklink /D %USERPROFILE%\.claude\skills\bitbucket-devops claude-bitbucket-devops-skill
 
    # macOS/Linux:
-   ln -s $(pwd)/claude-bitbucket-pipelines-skill ~/.claude/skills/bitbucket-pipeline-debug
+   ln -s $(pwd)/claude-bitbucket-devops-skill ~/.claude/skills/bitbucket-devops
    ```
 
 5. Restart VSCode

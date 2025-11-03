@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-11-01
 
 ### Added
-- Initial release of Claude Bitbucket Pipelines Skill
+- Initial release of Claude Bitbucket DevOps Skill
 - 8 core usage patterns:
   1. Find latest failing pipeline
   2. Inspect specific pipeline by number
@@ -36,6 +36,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tracking: [GitHub Issue #10801](https://github.com/anthropics/claude-code/issues/10801)
   - Impact: Users must click "Yes" for each Bitbucket API call
   - Workaround: None currently available in VSCode extension
+
+## [1.1.0] - 2025-11-02
+
+### 🎉 Major Update: No More MCP Approval Prompts!
+
+### Changed
+- **BREAKING**: Converted from MCP tools to Node.js CLI approach
+- **NEW**: Direct Node.js API calls via Bash tool (auto-approved in Claude Code)
+- **NEW**: Git submodule architecture using `apra-bitbucket-mcp`
+- **NEW**: Flexible credential storage with priority order (project → user → skill)
+- Refactored SKILL.md to use Node.js commands instead of `mcp__bitbucket-mcp__*` tools
+- Updated `allowed-tools` to: `Bash, Read, Write, Grep, Glob`
+
+### Added
+- **Git Submodule**: `bitbucket-mcp` (apra-bitbucket-mcp) as submodule
+- **Helper Library**: `lib/helpers.js` with intuitive high-level functions:
+  - `get-latest-failed` - Get most recent failed pipeline
+  - `get-latest` - Get most recent pipeline (any status)
+  - `get-by-number` - Find pipeline by build number
+  - `get-failed-steps` - Get all failed steps
+  - `download-failed-logs` - Download logs from failed steps
+  - `get-info` - Get formatted pipeline information
+- **CLI Tool**: `bitbucket-cli` command in submodule for direct API access
+- **Credential Template**: `credentials.json.template`
+- **Install Scripts**:
+  - `install.sh` - Automated installer for Unix/Linux/macOS
+  - `install.ps1` - Automated installer for Windows PowerShell
+- **Credential Priority**: Project-level → User-level → Skill-level
+
+### Removed
+- MCP server runtime requirement (still uses bitbucket-mcp as library)
+- VSCode MCP configuration requirement
+- All MCP approval prompt warnings
+
+### Fixed
+- **Issue #10801 workaround**: No approval prompts by using Bash + Node.js
+- Simplified installation (one-command setup)
+- Better cross-platform support (Windows, macOS, Linux)
+
+### Upgraded
+- Prerequisites: Now requires Node.js v18+ and Git (more portable than bash/curl/jq)
+- Performance: Direct API calls via Node.js, no MCP protocol overhead
+- Maintainability: Reuses bitbucket-mcp client code via submodule
+- Type Safety: Benefits from TypeScript definitions in bitbucket-mcp
+
+### Migration Notes
+
+**From v1.0.0 to v1.1.0:**
+
+1. **Uninstall MCP server** (optional, no longer needed for skill):
+   - Remove bitbucket-mcp from VSCode settings.json (if configured)
+
+2. **Clone/pull latest skill code**:
+   ```bash
+   cd ~/.claude/skills/bitbucket-devops
+   git pull
+   ```
+
+3. **Run new installer**:
+   ```bash
+   # Unix/macOS
+   bash install.sh
+
+   # Windows
+   powershell -ExecutionPolicy Bypass -File install.ps1
+   ```
+   This will:
+   - Initialize git submodule (bitbucket-mcp)
+   - Install Node.js dependencies
+   - Build the CLI tool
+   - Create credentials.json from template
+
+4. **Configure credentials**:
+   - Edit `credentials.json` with your Bitbucket credentials
+   - Or create `~/.bitbucket-credentials` for user-level config
+
+5. **Restart VSCode**
+
+**Benefits of 1.1.0:**
+- ✅ **Zero approval prompts** - Bash + Node.js is auto-approved
+- ✅ **Simpler setup** - No MCP server runtime configuration
+- ✅ **Faster** - Direct API calls, no MCP protocol overhead
+- ✅ **More maintainable** - Reuses bitbucket-mcp client via submodule
+- ✅ **Better DX** - Intuitive helper functions for common operations
 
 ## [Unreleased]
 
@@ -67,7 +151,7 @@ If you were using a pre-release version:
 1. **Backup your custom configurations** (if any)
 2. **Remove old skill:**
    ```bash
-   rm -rf ~/.claude/skills/bitbucket-pipeline-debug
+   rm -rf ~/.claude/skills/bitbucket-devops
    ```
 3. **Install 1.0.0** following [INSTALL.md](./INSTALL.md)
 4. **Restore custom configurations**

@@ -1,8 +1,9 @@
 # Credentials and sensitive files
 .env
 *.secret
-*credentials*
 *password*
+credentials.json
+.bitbucket-credentials
 
 # IDE
 .vscode/
