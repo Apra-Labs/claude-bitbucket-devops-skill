@@ -1,6 +1,6 @@
 ---
 name: bitbucket-devops
-description: Comprehensive Bitbucket DevOps automation using direct Node.js API calls. Manage pipelines, repositories, pull requests, and CI/CD workflows. Use this skill when the user asks to check pipeline status, manage PRs, find failing pipelines, download logs, trigger builds, or analyze pipeline failures. No MCP approval prompts required - uses Bash tool with node commands.
+description: Comprehensive Bitbucket pipeline automation using direct Node.js API calls. Monitor pipeline status, analyze failures, download logs, and trigger builds. Use this skill when the user asks to check pipeline status, find failing pipelines, download logs, trigger builds, or debug pipeline failures. No MCP approval prompts required - uses Bash tool with node commands.
 allowed-tools: Bash, Read, Write, Grep, Glob
 ---
 
@@ -54,16 +54,49 @@ Credentials are loaded with priority (first found wins):
 
 ## Helper Functions
 
-The skill provides high-level helper functions in `lib/helpers.js`:
+The skill provides high-level helper functions located at: `~/.claude/skills/bitbucket-devops/lib/helpers.js`
 
-- **get-latest-failed** - Get the most recent failed pipeline
-- **get-latest** - Get the most recent pipeline (any status)
-- **get-by-number** - Find pipeline by build number
-- **get-failed-steps** - Get all failed steps from a pipeline
-- **download-failed-logs** - Download logs from all failed steps
-- **get-info** - Get formatted pipeline information
+**Usage:** `node ~/.claude/skills/bitbucket-devops/lib/helpers.js <command> <args>`
+
+**Available commands:**
+- `get-latest-failed <workspace> <repo>` - Get most recent failed pipeline
+- `get-latest <workspace> <repo>` - Get most recent pipeline (any status)
+- `get-by-number <workspace> <repo> <build-number>` - Find pipeline by number
+- `get-failed-steps <workspace> <repo> <pipeline-uuid>` - Get all failed steps
+- `download-failed-logs <workspace> <repo> <pipeline-uuid> <build-number>` - Download logs from all failed steps
+- `get-info <workspace> <repo> <pipeline-uuid>` - Get formatted pipeline information
 
 ## Usage Patterns
+
+### Pattern 0: Detect Workspace and Repository (ALWAYS DO THIS FIRST)
+
+**Before any pipeline operation**, determine the workspace and repository.
+
+**Option 1: Auto-detect from git remote**
+```bash
+# Get git remote URL
+git_url=$(git config --get remote.origin.url 2>/dev/null)
+
+# Parse workspace and repo from: git@bitbucket.org:workspace/repo.git or https://bitbucket.org/workspace/repo.git
+if [[ "$git_url" =~ bitbucket.org[:/]([^/]+)/([^/.]+) ]]; then
+  WORKSPACE="${BASH_REMATCH[1]}"
+  REPO="${BASH_REMATCH[2]}"
+  echo "Detected: $WORKSPACE/$REPO"
+fi
+```
+
+**Option 2: Check credentials file**
+```bash
+# Check configured workspace
+cat ~/.claude/skills/bitbucket-devops/credentials.json | grep workspace
+```
+
+**Option 3: Ask user**
+If auto-detection fails or user is asking about a different repo, ask:
+- "What's your Bitbucket workspace?"
+- "What's the repository name?"
+
+**IMPORTANT:** Use the actual workspace/repo values in all subsequent commands. Never use literal strings `"workspace"` or `"repo"`.
 
 ### Pattern 1: Find Latest Failing Pipeline
 
@@ -291,47 +324,49 @@ grep -i "error" .pipeline-logs/pipeline-34-Deploy.log | sort | uniq -c | sort -n
 **User Requests:**
 - "What pipelines can I run?"
 - "What can I trigger on this branch?"
+- "What pipeline types exist?"
+
+**Note:** Pipeline types are defined in `bitbucket-pipelines.yml` in the repository.
 
 **Steps:**
-1. Get branching model
-2. Parse available pipeline configurations
-3. List available types
+1. Read bitbucket-pipelines.yml from repository root
+2. Parse pipeline definitions (default, custom, branches)
+3. List available options
+4. Optionally get branching model for branch strategy
 
-**Command:**
+**Command to read pipeline config:**
+```bash
+# Use Read tool to read bitbucket-pipelines.yml
+# Parse YAML for:
+# - pipelines.default (runs on all branches)
+# - pipelines.branches.* (branch-specific)
+# - pipelines.custom.* (custom/manual pipelines)
+# - pipelines.pull-requests.* (PR pipelines)
+```
+
+**For branching strategy only:**
 ```bash
 node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
   get-branching-model "workspace" "repo"
 ```
 
-**Response Parsing:**
-```json
-{
-  "development": { "name": "develop" },
-  "production": { "name": "main" },
-  "branch_types": [
-    { "kind": "feature", "prefix": "feature/" },
-    { "kind": "bugfix", "prefix": "bugfix/" },
-    { "kind": "hotfix", "prefix": "hotfix/" }
-  ]
-}
-```
-
 **Present to User:**
 ```
-Available Pipeline Configurations:
+Available Pipelines (from bitbucket-pipelines.yml):
 
-Branch Types:
-- Development: develop
-- Production: main
-- Feature branches: feature/*
-- Bugfix branches: bugfix/*
-- Hotfix branches: hotfix/*
+Default Pipeline:
+- Runs automatically on all branches
 
-Pipeline Types (from bitbucket-pipelines.yml):
-- default (runs on all branches)
-- branches.<branch-name> (branch-specific)
-- custom.<pipeline-name> (custom pipelines)
-- pull-requests (PR pipelines)
+Custom Pipelines:
+- deploy-production (manual trigger)
+- deploy-staging (manual trigger)
+- run-tests (manual trigger)
+
+Branch-Specific:
+- main: Production deployment pipeline
+- develop: Development pipeline
+
+To trigger a custom pipeline, use Pattern 8 with the pipeline name.
 ```
 
 ### Pattern 8: Trigger Pipeline Run
@@ -345,6 +380,7 @@ Pipeline Types (from bitbucket-pipelines.yml):
 1. Confirm with user: branch, pipeline type, variables
 2. Use CLI to trigger pipeline
 3. Display result with URL and build number
+4. Optionally monitor progress (see Pattern 9)
 
 **Command:**
 ```bash
@@ -371,13 +407,165 @@ URL: https://bitbucket.org/workspace/repo/pipelines/results/456
 Status: IN_PROGRESS
 ```
 
+### Pattern 9: Monitor Running Pipeline
+
+**User Requests:**
+- "Monitor pipeline #456"
+- "Watch the current build"
+- "Is the build done yet?"
+- "Track the pipeline progress"
+
+**Steps:**
+1. Get current pipeline status
+2. Check if RUNNING/IN_PROGRESS
+3. Show current step if running
+4. Check again after delay if needed
+5. Report when complete with final status
+
+**Command:**
+```bash
+# Get current status
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
+  get-by-number "workspace" "repo" 456
+```
+
+**Parse Response:**
+```json
+{
+  "state": {
+    "name": "IN_PROGRESS",  // or "COMPLETED"
+    "result": {
+      "name": "SUCCESSFUL"  // Only when COMPLETED: SUCCESSFUL/FAILED/STOPPED
+    }
+  },
+  "build_number": 456
+}
+```
+
+**Present to User:**
+```
+Pipeline #456 Status:
+
+Current State: IN_PROGRESS
+Branch: main
+Started: 5 minutes ago
+Current Step: Deploy (step 3/5)
+
+[Wait 30 seconds and check again...]
+
+--- After completion ---
+✓ Pipeline #456 COMPLETED
+Result: SUCCESSFUL
+Duration: 8m 32s
+```
+
+**Monitoring Loop:**
+- If IN_PROGRESS: Wait 30-60 seconds, check again
+- If COMPLETED: Report final result (SUCCESSFUL/FAILED/STOPPED)
+- If FAILED: Offer to download logs (Pattern 4)
+
+### Pattern 10: The DevOps REPL Loop (Full Debugging Workflow)
+
+**User Requests:**
+- "Fix the failing build"
+- "Debug this pipeline and fix it"
+- "Help me get this build green"
+- "Why is my build failing?"
+
+**This is the complete observe-analyze-fix loop that makes DevOps interactive:**
+
+**1. READ - Find and Analyze Failure:**
+```bash
+# Step 1a: Get latest failed pipeline
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
+  get-latest-failed "workspace" "repo"
+
+# Step 1b: Get failed steps
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
+  get-failed-steps "workspace" "repo" "{pipeline-uuid}"
+
+# Step 1c: Download failed logs
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
+  download-failed-logs "workspace" "repo" "{pipeline-uuid}" <build-number>
+```
+
+**2. EVAL - Analyze the Logs:**
+```bash
+# Extract errors from logs
+grep -i "error\|failed\|exception\|fatal" .pipeline-logs/*.log
+
+# Show context around errors (5 lines before/after)
+grep -i -A 5 -B 5 "error" .pipeline-logs/pipeline-*.log
+
+# Analyze the error:
+# - What type of error? (compilation, test failure, deployment, etc.)
+# - What file/line number?
+# - What's the root cause?
+```
+
+**3. PRINT - Suggest Fix:**
+Present findings to user:
+```
+Found the issue in Pipeline #123:
+
+Error Type: TypeScript compilation error
+Location: src/auth/service.ts:42
+Error: Property 'userId' does not exist on type 'User'
+
+Root Cause: The User interface was updated but this file wasn't
+
+Suggested Fix:
+Change line 42 from:
+  return user.userId
+To:
+  return user.id
+
+Should I apply this fix?
+```
+
+**4. LOOP - Apply Fix and Re-Test:**
+```bash
+# If user approves:
+# Step 4a: Apply fix using Edit tool
+# Edit src/auth/service.ts and make the change
+
+# Step 4b: Optionally commit
+git add src/auth/service.ts
+git commit -m "Fix: Update User property reference from userId to id"
+
+# Step 4c: Trigger new pipeline run
+node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
+  run-pipeline "workspace" "repo" "branch-name"
+
+# Step 4d: Monitor the new build (Pattern 9)
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
+  get-by-number "workspace" "repo" <new-build-number>
+```
+
+**5. REPEAT or CELEBRATE:**
+- If new build FAILS: Go back to step 1 (READ) with new logs
+- If new build SUCCEEDS: ✅ Success! Build is green
+- If new build IN_PROGRESS: Monitor (Pattern 9)
+
+**Key Points:**
+- **Stay in the loop** until build passes
+- **Learn from patterns** across iterations
+- **Keep user informed** at each step
+- **Ask permission** before making code changes
+- **Track progress** - "Attempt 1 failed, trying fix 2..."
+
+**This transforms hours of manual debugging into minutes of AI-assisted iteration.**
+
 ## Log Storage
 
-Logs are downloaded to the **current project directory**:
+Logs are downloaded to `.pipeline-logs/` in the directory where VSCode is opened (your working directory).
 
+**Path:** `.pipeline-logs/` relative to `process.cwd()` when commands execute
+
+**Structure:**
 ```
-your-project/
-├── .pipeline-logs/           ← Created automatically
+/path/to/open-project/
+├── .pipeline-logs/           ← Created automatically here
 │   ├── pipeline-123-Deploy.log
 │   ├── pipeline-123-Test.log
 │   └── errors-only.txt
@@ -385,7 +573,11 @@ your-project/
 └── ...
 ```
 
-**Important:** Add `.pipeline-logs/` to your project's `.gitignore`.
+**Important:**
+- Logs are stored in the current working directory
+- Always use relative path: `.pipeline-logs/filename.log`
+- Tell user to add `.pipeline-logs/` to their project's `.gitignore`
+- Logs persist across sessions for easy reference
 
 ## Error Handling
 
