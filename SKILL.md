@@ -10,46 +10,87 @@ This skill provides comprehensive Bitbucket DevOps automation using direct Node.
 
 **Key Advantage:** Uses direct Node.js calls (auto-approved) instead of MCP tools, eliminating the approval prompts issue from [GitHub Issue #10801](https://github.com/anthropics/claude-code/issues/10801).
 
-## Available CLI Tools
+## How to Approach User Requests
 
-This skill provides **two complete CLI interfaces** with all Bitbucket operations pre-built and ready to use:
+Use a **three-tier fallback strategy** when solving user requests:
 
-### 1. High-Level Helper Functions
+### Tier 1: High-Level Helper Functions (Try First)
+These solve common workflows in a single command. Use these when the user's request matches a common pattern.
+
 **Location:** `~/.claude/skills/bitbucket-devops/lib/helpers.js`
 
 **Commands:**
 - `get-latest-failed <workspace> <repo>` - Get most recent failed pipeline
 - `get-latest <workspace> <repo>` - Get most recent pipeline (any status)
-- `get-by-number <workspace> <repo> <build-number>` - Find pipeline by number
+- `get-by-number <workspace> <repo> <build-number>` - Find pipeline by build number
 - `get-failed-steps <workspace> <repo> <pipeline-uuid>` - Get all failed steps
-- `download-failed-logs <workspace> <repo> <pipeline-uuid> <build-number>` - Download logs from all failed steps
-- `get-info <workspace> <repo> <pipeline-uuid>` - Get formatted pipeline information
+- `download-failed-logs <workspace> <repo> <pipeline-uuid> <build-number>` - Download all failed step logs
+- `get-info <workspace> <repo> <pipeline-uuid>` - Get formatted pipeline + steps info
 
-### 2. Low-Level API Access
+**When to use:** User asks for "latest failed build", "download logs for pipeline #123", "what failed in this build"
+
+**Usage:**
+```bash
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js <command> <args>
+```
+
+### Tier 2: Low-Level CLI Commands (If Tier 1 Doesn't Fit)
+Direct API wrappers for specific operations. Use when helpers don't cover the exact request, or when you need to compose multiple operations.
+
 **Location:** `~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js`
 
 **Commands:**
-- `list-pipelines <workspace> <repo> [limit]` - List recent pipelines
-- `get-pipeline <workspace> <repo> <pipeline-uuid>` - Get pipeline details
-- `get-pipeline-steps <workspace> <repo> <pipeline-uuid>` - Get all pipeline steps
-- `get-step-logs <workspace> <repo> <pipeline-uuid> <step-uuid>` - Get logs for specific step
+- `list-pipelines <workspace> <repo> [limit]` - List recent pipelines (raw)
+- `get-pipeline <workspace> <repo> <pipeline-uuid>` - Get specific pipeline by UUID
+- `get-pipeline-steps <workspace> <repo> <pipeline-uuid>` - Get all steps for a pipeline
+- `get-step-logs <workspace> <repo> <pipeline-uuid> <step-uuid>` - Get logs for one step
 - `run-pipeline <workspace> <repo> <branch> [pipeline-name] [variables-json]` - Trigger pipeline
 - `stop-pipeline <workspace> <repo> <pipeline-uuid>` - Stop running pipeline
-- `get-branching-model <workspace> <repo>` - Get repository branching model
-- `list-repositories <workspace>` - List all repositories in workspace
+- `get-branching-model <workspace> <repo>` - Get repository branching strategy
+- `list-repositories <workspace>` - List all repos in workspace
 
-**Usage Pattern:**
+**When to use:** User needs operations not covered by helpers (trigger builds, stop pipelines, list repos), or you need to chain multiple commands
+
+**Usage:**
 ```bash
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js <command> <args>
 node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js <command> <args>
 ```
 
-**Important:** Before attempting any operation, review the available CLI commands above. Most user requests can be solved by:
-1. Using a single CLI command directly
-2. Chaining multiple CLI commands together with bash pipes/variables
-3. Combining CLI output with standard tools (grep, jq, awk, etc.)
+**Example - Chaining CLI commands:**
+```bash
+# Get pipeline UUID, then download specific step logs
+uuid=$(node index-cli.js list-pipelines workspace repo 10 | jq -r '.values[0].uuid')
+node index-cli.js get-step-logs workspace repo "$uuid" "{step-uuid}" > step.log
+```
 
-Always check if existing CLI tools can solve the problem before considering alternative approaches. These tools are pre-built, tested, and ready to use via the Bash tool.
+### Tier 3: Direct Bitbucket API Calls (Last Resort)
+When neither Tier 1 nor Tier 2 provides the needed operation, use direct API calls.
+
+**Documentation:** `~/.claude/skills/bitbucket-devops/bitbucket-mcp/docs/`
+
+**Available docs:**
+- `api-overview.md` - Authentication, base URLs, rate limits
+- `pipelines-api.md` - Complete pipeline API reference
+- `repositories-api.md` - Repository operations
+- `pull-requests-api.md` - PR operations (future)
+
+**When to use:** Only when Tier 1 and Tier 2 cannot solve the request (rare)
+
+**Usage:**
+```bash
+# Read docs first
+# Use curl with credentials from ~/.claude/skills/bitbucket-devops/credentials.json
+curl -u username:password https://api.bitbucket.org/2.0/repositories/workspace/repo/...
+```
+
+---
+
+**Decision Tree:**
+1. Check Tier 1 helpers - does a helper solve this? → Use it
+2. If not, check Tier 2 CLI - can one or more commands solve this? → Use/chain them
+3. If not, check Tier 3 docs - read API docs and make direct call
+
+**Key Principle:** Start simple (Tier 1), increase complexity only when necessary.
 
 ## The DevOps REPL Advantage
 
@@ -95,7 +136,7 @@ Credentials are loaded with priority (first found wins):
 
 ## Usage Patterns
 
-**Before starting:** Review the complete list of CLI commands in the "Available CLI Tools" section above. These pre-built tools cover all Bitbucket operations and can be combined to solve complex requests.
+**Before starting:** Follow the three-tier fallback strategy above. Start with Tier 1 helpers, fall back to Tier 2 CLI if needed, use Tier 3 API docs as last resort.
 
 ### Pattern 0: Detect Workspace and Repository (ALWAYS DO THIS FIRST)
 
