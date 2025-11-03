@@ -10,6 +10,47 @@ This skill provides comprehensive Bitbucket DevOps automation using direct Node.
 
 **Key Advantage:** Uses direct Node.js calls (auto-approved) instead of MCP tools, eliminating the approval prompts issue from [GitHub Issue #10801](https://github.com/anthropics/claude-code/issues/10801).
 
+## Available CLI Tools
+
+This skill provides **two complete CLI interfaces** with all Bitbucket operations pre-built and ready to use:
+
+### 1. High-Level Helper Functions
+**Location:** `~/.claude/skills/bitbucket-devops/lib/helpers.js`
+
+**Commands:**
+- `get-latest-failed <workspace> <repo>` - Get most recent failed pipeline
+- `get-latest <workspace> <repo>` - Get most recent pipeline (any status)
+- `get-by-number <workspace> <repo> <build-number>` - Find pipeline by number
+- `get-failed-steps <workspace> <repo> <pipeline-uuid>` - Get all failed steps
+- `download-failed-logs <workspace> <repo> <pipeline-uuid> <build-number>` - Download logs from all failed steps
+- `get-info <workspace> <repo> <pipeline-uuid>` - Get formatted pipeline information
+
+### 2. Low-Level API Access
+**Location:** `~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js`
+
+**Commands:**
+- `list-pipelines <workspace> <repo> [limit]` - List recent pipelines
+- `get-pipeline <workspace> <repo> <pipeline-uuid>` - Get pipeline details
+- `get-pipeline-steps <workspace> <repo> <pipeline-uuid>` - Get all pipeline steps
+- `get-step-logs <workspace> <repo> <pipeline-uuid> <step-uuid>` - Get logs for specific step
+- `run-pipeline <workspace> <repo> <branch> [pipeline-name] [variables-json]` - Trigger pipeline
+- `stop-pipeline <workspace> <repo> <pipeline-uuid>` - Stop running pipeline
+- `get-branching-model <workspace> <repo>` - Get repository branching model
+- `list-repositories <workspace>` - List all repositories in workspace
+
+**Usage Pattern:**
+```bash
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js <command> <args>
+node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js <command> <args>
+```
+
+**Important:** Before attempting any operation, review the available CLI commands above. Most user requests can be solved by:
+1. Using a single CLI command directly
+2. Chaining multiple CLI commands together with bash pipes/variables
+3. Combining CLI output with standard tools (grep, jq, awk, etc.)
+
+Always check if existing CLI tools can solve the problem before considering alternative approaches. These tools are pre-built, tested, and ready to use via the Bash tool.
+
 ## The DevOps REPL Advantage
 
 Traditional pipeline debugging is slow: push code → wait → fail → investigate logs → fix → repeat (hours per cycle).
@@ -52,21 +93,9 @@ Credentials are loaded with priority (first found wins):
 }
 ```
 
-## Helper Functions
-
-The skill provides high-level helper functions located at: `~/.claude/skills/bitbucket-devops/lib/helpers.js`
-
-**Usage:** `node ~/.claude/skills/bitbucket-devops/lib/helpers.js <command> <args>`
-
-**Available commands:**
-- `get-latest-failed <workspace> <repo>` - Get most recent failed pipeline
-- `get-latest <workspace> <repo>` - Get most recent pipeline (any status)
-- `get-by-number <workspace> <repo> <build-number>` - Find pipeline by number
-- `get-failed-steps <workspace> <repo> <pipeline-uuid>` - Get all failed steps
-- `download-failed-logs <workspace> <repo> <pipeline-uuid> <build-number>` - Download logs from all failed steps
-- `get-info <workspace> <repo> <pipeline-uuid>` - Get formatted pipeline information
-
 ## Usage Patterns
+
+**Before starting:** Review the complete list of CLI commands in the "Available CLI Tools" section above. These pre-built tools cover all Bitbucket operations and can be combined to solve complex requests.
 
 ### Pattern 0: Detect Workspace and Repository (ALWAYS DO THIS FIRST)
 
