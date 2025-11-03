@@ -1,0 +1,25 @@
+{
+  "name": "claude-bitbucket-devops-skill",
+  "version": "1.0.0",
+  "description": "A Claude Code skill for comprehensive Bitbucket DevOps automation",
+  "type": "module",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "bitbucket",
+    "devops",
+    "pipelines",
+    "ci-cd",
+    "skill"
+  ],
+  "author": "Apra Labs <https://apralabs.com>",
+  "license": "CC-BY-4.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Apra-Labs/claude-bitbucket-devops-skill.git"
+  },
+  "homepage": "https://github.com/Apra-Labs/claude-bitbucket-devops-skill#readme",
+  "bugs": {
+    "url": "https://github.com/Apra-Labs/claude-bitbucket-devops-skill/issues"
+  }
+}

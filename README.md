@@ -6,6 +6,38 @@ A [Claude Code](https://claude.ai/code) skill for comprehensive Bitbucket DevOps
 
 > **Developed by [Apra Labs](https://apralabs.com)** - Building AI-powered developer tools
 
+## 🚀 Quick Start (5 minutes)
+
+**1. Clone and install:**
+```bash
+git clone --recursive https://github.com/Apra-Labs/claude-bitbucket-devops-skill.git
+cd claude-bitbucket-devops-skill
+bash install.sh
+```
+
+**2. Get Bitbucket App Password:**
+- Go to: https://bitbucket.org/account/settings/app-passwords/
+- Create password with: **Repository: Read** + **Pipelines: Read, Write**
+
+**3. Configure credentials:**
+```bash
+# Edit the file created by installer
+nano ~/.claude/skills/bitbucket-devops/credentials.json
+```
+
+**4. Restart VSCode:**
+- Close and reopen VSCode, or
+- `Ctrl+Shift+P` → "Developer: Reload Window"
+
+**5. Test it:**
+```
+Ask Claude: "What's the latest pipeline in my repo?"
+```
+
+✅ Done! Continue reading for detailed documentation.
+
+---
+
 ## Features
 
 🔍 **Find Failures Fast**
@@ -174,11 +206,38 @@ Edit `~/.claude/skills/bitbucket-devops/credentials.json`:
 2. User level: `~/.bitbucket-credentials`
 3. Skill level: `~/.claude/skills/bitbucket-devops/credentials.json`
 
+### Verify Installation
+
+Test that everything is working:
+
+```bash
+# Test helpers are available
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-latest "your-workspace" "your-repo"
+
+# Expected: JSON output with latest pipeline info
+```
+
+**If you get errors:**
+- "Cannot use import statement outside a module" → Make sure package.json was created in the skill directory
+- "Permission denied" → Check your credentials.json has correct app password
+- "Pipeline not found" → Verify workspace/repo names are correct
+
 ### Restart Claude Code
 
 **Important**: Restart VSCode to load the skill:
 - Close and reopen VSCode
 - Or use: `Ctrl+Shift+P` → "Developer: Reload Window"
+
+### Test the Skill
+
+Open any project with Bitbucket pipelines and ask Claude:
+```
+"What's the latest pipeline?"
+"Show me failing builds"
+"Get logs from pipeline #123"
+```
+
+The skill activates automatically when you ask pipeline-related questions!
 
 ### Add .pipeline-logs to .gitignore
 
@@ -250,7 +309,7 @@ This means:
 The skill automatically works with any workspace/repo you specify:
 
 - **Explicit**: "Show failures in workspace/repo"
-- **From MCP config**: Uses your configured workspace by default
+- **From credentials**: Uses your configured workspace as default
 - **From git remote**: Detects workspace from current project
 
 ## How This Skill Works
@@ -299,7 +358,7 @@ You: Show me the last 20 builds
 
 **Check:**
 - App password has `Repository: Read` and `Pipeline: Read/Write` scopes
-- Username and password are correct in `settings.json`
+- Username and password are correct in `credentials.json`
 - Workspace name is correct
 
 ### Logs unavailable
