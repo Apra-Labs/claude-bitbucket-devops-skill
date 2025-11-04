@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-11-04
+
+### 🎯 Major Refactoring: Credential Field Clarity + Git Operations Support
+
+### Changed
+- **BREAKING**: Credential format updated for semantic clarity
+  - `username` field renamed to `user_email` (for API authentication)
+  - New `username` field added (for git operations, workspace slug)
+  - Old format no longer supported (no backward compatibility needed - no existing users)
+- Updated `BitbucketConfig` interface with `gitUsername` field
+- Enhanced credential validation with helpful error messages
+
+### Added
+- **Git Operations Support**: New helper functions for git operations
+  - `buildGitUrl()`: Constructs authenticated git URLs
+  - `testGitAuth()`: Tests git authentication to repository
+  - `cloneRepository()`: Clones repository to local directory
+- CLI commands for git operations:
+  - `test-git-auth <workspace> <repo>`: Test git connectivity
+  - `clone-repo <workspace> <repo> [target_dir]`: Clone repository
+- Comprehensive field validation:
+  - Detects email in `username` field and shows helpful fix
+  - Detects missing `user_email` field with clear example
+  - Prevents common configuration mistakes
+
+### Improved
+- **credentials.json.template**: Updated with clear field explanations
+- **README.md**: Updated configuration section with field distinctions
+- **SKILL.md**: Updated credential format (critical for Claude to function correctly)
+- **docs/GIT_OPERATIONS.md**: Completely rewritten to reflect implementation
+- **install.sh**: Updated to show correct field descriptions
+- All documentation now consistently uses new credential format
+
+### Testing
+- ✅ API operations tested with `user_email` field (successful)
+- ✅ Git operations tested with `username` field (successful)
+- ✅ Validation tested with email in `username` field (correct error)
+- ✅ Validation tested with missing `user_email` (correct error)
+
+### Benefits
+1. **Clarity**: Fields named for their actual purpose (`user_email` vs `username`)
+2. **Validation**: Clear error messages guide users to fix mistakes
+3. **Git-ready**: Git operations work out of the box
+4. **Self-documenting**: Code clearly shows what each field does
+5. **Future-proof**: Enables git operations without confusion
+
+### Migration
+No migration needed - skill had no existing users at time of refactoring.
+
 ## [1.0.0] - 2025-11-01
 
 ### Added

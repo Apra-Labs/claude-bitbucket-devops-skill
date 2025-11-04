@@ -196,10 +196,19 @@ Edit `~/.claude/skills/bitbucket-devops/credentials.json`:
 {
   "url": "https://api.bitbucket.org/2.0",
   "workspace": "your-workspace-name",
-  "username": "your-email@example.com",
+  "user_email": "your-email@example.com",
+  "username": "your-workspace-name",
   "password": "your-bitbucket-app-password"
 }
 ```
+
+**Important field distinctions:**
+- `user_email`: Your Bitbucket account email (for API authentication)
+- `username`: Your Bitbucket username/workspace slug (for git operations, typically same as workspace)
+- `workspace`: Your workspace slug (repository owner)
+- `password`: App password from Bitbucket
+
+**Note:** The skill validates these fields and will show helpful error messages if you accidentally put your email in the `username` field or vice versa.
 
 **Alternative locations** (priority order):
 1. Project level: `./credentials.json` (highest priority)

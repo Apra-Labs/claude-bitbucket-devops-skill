@@ -202,10 +202,19 @@ Credentials are loaded with priority (first found wins):
 {
   "url": "https://api.bitbucket.org/2.0",
   "workspace": "your-workspace",
-  "username": "your-email@example.com",
+  "user_email": "your-email@example.com",
+  "username": "your-workspace",
   "password": "your-app-password"
 }
 ```
+
+**Important - Different fields for different operations:**
+- `user_email`: Bitbucket account email (used for API authentication)
+- `username`: Bitbucket username/workspace slug (used for git operations, typically same as workspace)
+- `workspace`: Workspace slug (repository owner)
+- `password`: App password
+
+**Validation:** The skill validates credentials and shows helpful error messages if fields are swapped (e.g., if email is in `username` field).
 
 ## Usage Patterns
 

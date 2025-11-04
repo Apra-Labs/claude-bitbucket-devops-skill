@@ -230,8 +230,9 @@ else
 fi
 echo ""
 echo "    Required info:"
-echo "    - workspace: Your Bitbucket workspace name"
-echo "    - username: Your Bitbucket email"
+echo "    - workspace: Your Bitbucket workspace slug"
+echo "    - user_email: Your Bitbucket account email (for API auth)"
+echo "    - username: Your Bitbucket username (same as workspace, for git ops)"
 echo "    - password: App password (get from link below)"
 echo ""
 echo "    🔗 Get app password:"
