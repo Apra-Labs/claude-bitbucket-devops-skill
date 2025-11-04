@@ -149,6 +149,22 @@ curl -u username:password https://api.bitbucket.org/2.0/repositories/workspace/r
 
 **NEVER skip this process. NEVER create new .js files. ALWAYS use pre-built tools.**
 
+## Known Limitations
+
+### Pipeline Artifacts Cannot Be Downloaded via API
+
+**IMPORTANT:** Bitbucket Cloud does NOT provide an API to download pipeline artifacts.
+
+**If a user asks to download build artifacts:**
+1. Inform them that artifact download via API is not possible
+2. Direct them to the Bitbucket web UI:
+   - Repository → Pipelines → Build # → Step → Artifacts section → Download button
+3. Note: Artifacts expire automatically after 14 days
+
+**Tip:** For programmatic artifact access, consider uploading to S3/Azure Blob Storage during your pipeline (separate skills available for those platforms).
+
+**DO NOT:** Search for undocumented endpoints - this has been thoroughly researched and no API exists.
+
 ## The DevOps REPL Advantage
 
 Traditional pipeline debugging is slow: push code → wait → fail → investigate logs → fix → repeat (hours per cycle).

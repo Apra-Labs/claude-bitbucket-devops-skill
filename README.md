@@ -239,6 +239,21 @@ Open any project with Bitbucket pipelines and ask Claude:
 
 The skill activates automatically when you ask pipeline-related questions!
 
+## Known Limitations
+
+### Pipeline Artifacts Cannot Be Downloaded via API
+
+**IMPORTANT:** Bitbucket Cloud does NOT provide an API to download pipeline artifacts.
+
+**If you need to download build artifacts:**
+1. Use the Bitbucket web UI:
+   - Repository → Pipelines → Build # → Step → Artifacts section → Download button
+2. Note: Artifacts expire automatically after 14 days
+
+**Tip:** For programmatic artifact access, consider uploading to S3/Azure Blob Storage during your pipeline (separate skills available for those platforms).
+
+This limitation has been thoroughly researched - no undocumented API exists. See [ARTIFACTS_RESEARCH.md](ARTIFACTS_RESEARCH.md) for full research details.
+
 ### Add .pipeline-logs to .gitignore
 
 In each project where you use this skill, add to `.gitignore`:
