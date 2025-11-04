@@ -72,6 +72,10 @@ Direct API wrappers for specific operations. You MUST use these for operations n
 - `run-pipeline <workspace> <repo> <branch> [pipeline-name] [variables-json]` - Trigger pipeline
 - `stop-pipeline <workspace> <repo> <pipeline-uuid>` - Stop running pipeline
 
+⚠️ **CRITICAL:** Commands with `<pipeline-uuid>` require a UUID (like `{abc-123...}`), NOT a build number.
+- If you have build number, use Tier 1 helper `get-by-number` to get the UUID first
+- Or use Tier 1 helpers that handle this automatically (`get-failed-steps`, `download-failed-logs`)
+
 **Pull Request Operations:**
 - `list-prs <workspace> <repo> [state] [limit]` - List pull requests (state: OPEN, MERGED, DECLINED)
 - `get-pr <workspace> <repo> <pr_id>` - Get pull request details
@@ -811,6 +815,38 @@ ls -la ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/
 cd ~/.claude/skills/bitbucket-devops/
 bash install.sh
 ```
+
+### ⚠️ IMPORTANT: Build Number vs UUID
+
+**COMMON ERROR:** Using build number instead of UUID in pipeline commands.
+
+❌ **WRONG:**
+```bash
+get-pipeline-steps workspace repo 60  # 60 is a build number - will fail!
+# Error: 400 Bad Request - "Unexpected response body"
+```
+
+✅ **CORRECT - Use helper to convert build number to UUID:**
+```bash
+# Step 1: Get pipeline by build number (returns full object with UUID)
+pipeline=$(node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-by-number workspace repo 60)
+uuid=$(echo "$pipeline" | jq -r '.uuid')
+
+# Step 2: Now use the UUID
+get-pipeline-steps workspace repo "$uuid"  # Works!
+```
+
+✅ **OR use helper functions that handle this automatically:**
+```bash
+# These accept pipeline UUID and do the right thing
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-failed-steps workspace repo {uuid}
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js download-failed-logs workspace repo {uuid} 60
+```
+
+**Why this happens:**
+- Bitbucket has 2 identifiers: **build_number** (60) and **uuid** ({abc-123...})
+- CLI commands like `get-pipeline-steps` require **UUID**, not build number
+- Helper functions in lib/helpers.js handle the conversion automatically
 
 ### UUID Encoding
 
