@@ -201,10 +201,9 @@ else
     cp "$SCRIPT_DIR/docs/GIT_OPERATIONS.md" "$TARGET_DIR/docs/"
     cp -r "$SCRIPT_DIR/docs/bitbucket-api" "$TARGET_DIR/docs/"
 
-    echo "   Copying bitbucket-mcp/ (CLI and API docs)..."
+    echo "   Copying bitbucket-mcp/ (built CLI)..."
     mkdir -p "$TARGET_DIR/bitbucket-mcp"
     cp -r "$SCRIPT_DIR/bitbucket-mcp/dist" "$TARGET_DIR/bitbucket-mcp/"
-    cp -r "$SCRIPT_DIR/bitbucket-mcp/docs" "$TARGET_DIR/bitbucket-mcp/"
 
     echo "✓ Files copied to $TARGET_DIR"
 
