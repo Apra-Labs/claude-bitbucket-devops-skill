@@ -66,15 +66,16 @@ Direct API wrappers for specific operations. You MUST use these for operations n
 
 **Pipeline Operations:**
 - `list-pipelines <workspace> <repo> [limit]` - List recent pipelines (raw)
-- `get-pipeline <workspace> <repo> <pipeline-uuid>` - Get specific pipeline by UUID
-- `get-pipeline-steps <workspace> <repo> <pipeline-uuid>` - Get all steps for a pipeline
-- `get-step-logs <workspace> <repo> <pipeline-uuid> <step-uuid>` - Get logs for one step
+- `get-pipeline <workspace> <repo> <build_number_or_uuid>` - Get specific pipeline (accepts 60 OR {uuid})
+- `get-pipeline-steps <workspace> <repo> <build_number_or_uuid>` - Get all steps (accepts 60 OR {uuid})
+- `get-step-logs <workspace> <repo> <build_number_or_uuid> <step_uuid>` - Get logs (accepts 60 OR {uuid})
 - `run-pipeline <workspace> <repo> <branch> [pipeline-name] [variables-json]` - Trigger pipeline
-- `stop-pipeline <workspace> <repo> <pipeline-uuid>` - Stop running pipeline
+- `stop-pipeline <workspace> <repo> <build_number_or_uuid>` - Stop pipeline (accepts 60 OR {uuid})
 
-⚠️ **CRITICAL:** Commands with `<pipeline-uuid>` require a UUID (like `{abc-123...}`), NOT a build number.
-- If you have build number, use Tier 1 helper `get-by-number` to get the UUID first
-- Or use Tier 1 helpers that handle this automatically (`get-failed-steps`, `download-failed-logs`)
+✨ **SMART IDENTIFIERS:** Pipeline commands automatically detect and handle both:
+- Build numbers: `60` (auto-converts to UUID)
+- UUIDs: `{63bac81c-165b-41bd-bc58-26445567a332}` (uses directly)
+- Shows: `🔍 Detected build number 60, looking up UUID...` when converting
 
 **Pull Request Operations:**
 - `list-prs <workspace> <repo> [state] [limit]` - List pull requests (state: OPEN, MERGED, DECLINED)
@@ -816,37 +817,31 @@ cd ~/.claude/skills/bitbucket-devops/
 bash install.sh
 ```
 
-### ⚠️ IMPORTANT: Build Number vs UUID
+### ✨ Smart Pipeline Identifiers
 
-**COMMON ERROR:** Using build number instead of UUID in pipeline commands.
+**FEATURE:** Pipeline commands now automatically accept both build numbers AND UUIDs!
 
-❌ **WRONG:**
+✅ **Use build number directly:**
 ```bash
-get-pipeline-steps workspace repo 60  # 60 is a build number - will fail!
-# Error: 400 Bad Request - "Unexpected response body"
+get-pipeline-steps workspace repo 60
+# Output: 🔍 Detected build number 60, looking up UUID...
+#         ✓ Found UUID: {63bac81c-165b-41bd-bc58-26445567a332}
+#         [returns pipeline steps]
 ```
 
-✅ **CORRECT - Use helper to convert build number to UUID:**
+✅ **Or use UUID directly:**
 ```bash
-# Step 1: Get pipeline by build number (returns full object with UUID)
-pipeline=$(node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-by-number workspace repo 60)
-uuid=$(echo "$pipeline" | jq -r '.uuid')
-
-# Step 2: Now use the UUID
-get-pipeline-steps workspace repo "$uuid"  # Works!
+get-pipeline-steps workspace repo {63bac81c-165b-41bd-bc58-26445567a332}
+# Output: [returns pipeline steps immediately]
 ```
 
-✅ **OR use helper functions that handle this automatically:**
-```bash
-# These accept pipeline UUID and do the right thing
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-failed-steps workspace repo {uuid}
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js download-failed-logs workspace repo {uuid} 60
-```
+**How it works:**
+- Detects if input is a number → treats as build number, looks up UUID
+- Detects if input contains `{` or `-` → treats as UUID
+- Searches recent 100 pipelines when converting build numbers
+- Shows helpful feedback during conversion
 
-**Why this happens:**
-- Bitbucket has 2 identifiers: **build_number** (60) and **uuid** ({abc-123...})
-- CLI commands like `get-pipeline-steps` require **UUID**, not build number
-- Helper functions in lib/helpers.js handle the conversion automatically
+**No more "400 Bad Request" errors from using build numbers!** 🎉
 
 ### UUID Encoding
 
