@@ -38,14 +38,14 @@ These solve common workflows in a single command. If the user's request matches 
 
 **MUST use for:** "latest failed build", "download logs for pipeline #123", "what failed in this build", "get pipeline by number"
 
-**Usage (REQUIRED format):**
+**Usage:**
 ```bash
 node ~/.claude/skills/bitbucket-devops/lib/helpers.js <command> <args>
 ```
 
 **Example:**
 ```bash
-# User: "What's the latest failed pipeline?"
+# User: "What's the latest failing pipeline?"
 # You MUST use:
 node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-latest-failed "workspace" "repo"
 
@@ -54,7 +54,7 @@ node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-latest-failed "workspa
 # DO NOT write custom API calls
 ```
 
-### Tier 2: Low-Level CLI Commands (REQUIRED IF TIER 1 CANNOT SOLVE)
+### Tier 2: Low-Level CLI Commands (IF TIER 1 CANNOT SOLVE)
 
 **ONLY use Tier 2 if NO Tier 1 helper matches the user's request.**
 
@@ -62,53 +62,33 @@ Direct API wrappers for specific operations. You MUST use these for operations n
 
 **Location:** `~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js`
 
-**Available Commands:**
+**Key Commands** (see [docs/REFERENCE.md](docs/REFERENCE.md) for complete list):
 
 **Pipeline Operations:**
-- `list-pipelines <workspace> <repo> [limit]` - List recent pipelines (raw)
-- `get-pipeline <workspace> <repo> <build_number_or_uuid>` - Get specific pipeline (accepts 60 OR {uuid})
-- `get-pipeline-steps <workspace> <repo> <build_number_or_uuid>` - Get all steps (accepts 60 OR {uuid})
-- `get-step-logs <workspace> <repo> <build_number_or_uuid> <step_uuid>` - Get logs (accepts 60 OR {uuid})
-- `run-pipeline <workspace> <repo> <branch> [pipeline-name] [variables-json]` - Trigger pipeline
-- `stop-pipeline <workspace> <repo> <build_number_or_uuid>` - Stop pipeline (accepts 60 OR {uuid})
-
-✨ **SMART IDENTIFIERS:** Pipeline commands automatically detect and handle both:
-- Build numbers: `60` (auto-converts to UUID)
-- UUIDs: `{63bac81c-165b-41bd-bc58-26445567a332}` (uses directly)
-- Shows: `🔍 Detected build number 60, looking up UUID...` when converting
+- `list-pipelines <workspace> <repo> [limit]`
+- `get-pipeline <workspace> <repo> <pipeline-uuid>`
+- `get-pipeline-steps <workspace> <repo> <pipeline-uuid>`
+- `get-step-logs <workspace> <repo> <pipeline-uuid> <step-uuid>`
+- `run-pipeline <workspace> <repo> <branch> [pipeline-name] [variables-json]`
+- `stop-pipeline <workspace> <repo> <pipeline-uuid>`
 
 **Pull Request Operations:**
-- `list-prs <workspace> <repo> [state] [limit]` - List pull requests (state: OPEN, MERGED, DECLINED)
-- `get-pr <workspace> <repo> <pr_id>` - Get pull request details
-- `approve-pr <workspace> <repo> <pr_id>` - Approve a pull request
-- `merge-pr <workspace> <repo> <pr_id> [message] [strategy]` - Merge PR (strategy: merge-commit, squash, fast-forward)
-- `decline-pr <workspace> <repo> <pr_id> [message]` - Decline/close a pull request
+- `list-prs <workspace> <repo> [state] [limit]`
+- `get-pr <workspace> <repo> <pr_id>`
+- `approve-pr <workspace> <repo> <pr_id>`
+- `merge-pr <workspace> <repo> <pr_id> [message] [strategy]`
+- `decline-pr <workspace> <repo> <pr_id> [message]`
 
 **Repository Operations:**
-- `get-branching-model <workspace> <repo>` - Get repository branching strategy
-- `list-repositories <workspace>` - List all repos in workspace
+- `get-branching-model <workspace> <repo>`
+- `list-repositories <workspace>`
 
-**MUST use for:** Trigger builds, stop pipelines, list repos, PR management, operations requiring multiple steps
-
-**Usage (REQUIRED format):**
+**Usage:**
 ```bash
 node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js <command> <args>
 ```
 
-**You MAY chain multiple Tier 2 commands:**
-```bash
-# User: "Download logs for the Deploy step from pipeline #123"
-# Step 1: Get pipeline UUID (Tier 1)
-pipeline=$(node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-by-number "workspace" "repo" 123)
-uuid=$(echo "$pipeline" | jq -r '.uuid')
-
-# Step 2: Get steps (Tier 2)
-steps=$(node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js get-pipeline-steps "workspace" "repo" "$uuid")
-step_uuid=$(echo "$steps" | jq -r '.values[] | select(.name=="Deploy") | .uuid')
-
-# Step 3: Get logs (Tier 2)
-node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js get-step-logs "workspace" "repo" "$uuid" "$step_uuid" > .pipeline-logs/deploy.log
-```
+**You MAY chain multiple Tier 2 commands** - see [docs/PATTERNS.md](docs/PATTERNS.md) for examples.
 
 ### Tier 3: Direct Bitbucket API Calls (ONLY IF TIER 1 AND 2 FAIL)
 
@@ -120,19 +100,10 @@ Before using Tier 3, you MUST:
 3. Verify no combination of Tier 1 + Tier 2 can solve it
 
 **Documentation:** `~/.claude/skills/bitbucket-devops/bitbucket-mcp/docs/`
-
-**Available docs:**
 - `api-overview.md` - Authentication, base URLs, rate limits
 - `pipelines-api.md` - Complete pipeline API reference
 - `repositories-api.md` - Repository operations
 - `pull-requests-api.md` - PR operations (future)
-
-**Usage (ONLY as last resort):**
-```bash
-# You MUST read docs first using Read tool
-# Then use curl with credentials
-curl -u username:password https://api.bitbucket.org/2.0/repositories/workspace/repo/...
-```
 
 ---
 
@@ -144,15 +115,17 @@ curl -u username:password https://api.bitbucket.org/2.0/repositories/workspace/r
    - **YES** → Use it immediately with `node ~/.claude/skills/bitbucket-devops/lib/helpers.js <command>`
    - **NO** → Continue to step 2
 
-2. **Check Tier 2 CLI** - Review the CLI commands above (pipelines, PRs, repos). Can one or more solve this?
+2. **Check Tier 2 CLI** - Review the CLI commands above. Can one or more solve this?
    - **YES** → Use them with `node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js <command>`
    - **NO** → Continue to step 3
 
 3. **Check Tier 3 docs** - Read API docs. Is there a direct API call needed?
-   - **YES** → Read docs, use curl
+   - **YES** → Read docs, use curl with credentials
    - **NO** → Ask user for clarification
 
 **NEVER skip this process. NEVER create new .js files. ALWAYS use pre-built tools.**
+
+---
 
 ## Known Limitations
 
@@ -166,9 +139,11 @@ curl -u username:password https://api.bitbucket.org/2.0/repositories/workspace/r
    - Repository → Pipelines → Build # → Step → Artifacts section → Download button
 3. Note: Artifacts expire automatically after 14 days
 
-**Tip:** For programmatic artifact access, consider uploading to S3/Azure Blob Storage during your pipeline (separate skills available for those platforms).
+**Tip:** For programmatic artifact access, consider uploading to S3/Azure Blob Storage during your pipeline.
 
 **DO NOT:** Search for undocumented endpoints - this has been thoroughly researched and no API exists.
+
+---
 
 ## The DevOps REPL Advantage
 
@@ -184,6 +159,8 @@ This skill enables a **REPL-like experience for DevOps**: Claude observes pipeli
 
 This transforms DevOps from slow batch processing into interactive, conversational development.
 
+---
+
 ## Prerequisites
 
 This skill uses the Bash tool (auto-approved in Claude Code) to run Node.js commands. Required:
@@ -191,6 +168,8 @@ This skill uses the Bash tool (auto-approved in Claude Code) to run Node.js comm
 - Git (for submodule management)
 
 **Note:** No MCP server required - bitbucket-mcp is used as a library via git submodule.
+
+---
 
 ## Configuration
 
@@ -203,38 +182,37 @@ Credentials are loaded with priority (first found wins):
 
 ### Credential Format
 
+**IMPORTANT: Different credentials for different operations**
+
 ```json
 {
   "url": "https://api.bitbucket.org/2.0",
-  "workspace": "your-workspace",
+  "workspace": "your-workspace-name",
   "user_email": "your-email@example.com",
-  "username": "your-workspace",
-  "password": "your-app-password"
+  "username": "your-workspace-name",
+  "password": "your-bitbucket-app-password"
 }
 ```
 
-**Important - Different fields for different operations:**
-- `user_email`: Bitbucket account email (used for API authentication)
-- `username`: Bitbucket username/workspace slug (used for git operations, typically same as workspace)
-- `workspace`: Workspace slug (repository owner)
-- `password`: App password
+**Field explanations:**
+- `user_email`: Your Bitbucket account email (for API authentication) - MUST contain `@`
+- `username`: Your Bitbucket workspace slug (for git operations) - MUST NOT contain `@`
+- `password`: App password from https://bitbucket.org/account/settings/app-passwords/
+  - Required permissions: Repositories: Read, Pipelines: Read
 
-**Validation:** The skill validates credentials and shows helpful error messages if fields are swapped (e.g., if email is in `username` field).
+See [docs/GIT_OPERATIONS.md](docs/GIT_OPERATIONS.md) for details on credential requirements.
 
-## Usage Patterns
+---
 
-**Before starting:** Follow the three-tier fallback strategy above. Start with Tier 1 helpers, fall back to Tier 2 CLI if needed, use Tier 3 API docs as last resort.
+## Quick Start: Essential Patterns
 
-### Pattern 0: Detect Workspace and Repository (ALWAYS DO THIS FIRST)
+### Pattern 0: Always Detect Workspace and Repository First
 
 **Before any pipeline operation**, determine the workspace and repository.
 
-**Option 1: Auto-detect from git remote**
+**Auto-detect from git remote:**
 ```bash
-# Get git remote URL
 git_url=$(git config --get remote.origin.url 2>/dev/null)
-
-# Parse workspace and repo from: git@bitbucket.org:workspace/repo.git or https://bitbucket.org/workspace/repo.git
 if [[ "$git_url" =~ bitbucket.org[:/]([^/]+)/([^/.]+) ]]; then
   WORKSPACE="${BASH_REMATCH[1]}"
   REPO="${BASH_REMATCH[2]}"
@@ -242,426 +220,75 @@ if [[ "$git_url" =~ bitbucket.org[:/]([^/]+)/([^/.]+) ]]; then
 fi
 ```
 
-**Option 2: Check credentials file**
-```bash
-# Check configured workspace
-cat ~/.claude/skills/bitbucket-devops/credentials.json | grep workspace
-```
+**Or ask user:** "What's your Bitbucket workspace and repository name?"
 
-**Option 3: Ask user**
-If auto-detection fails or user is asking about a different repo, ask:
-- "What's your Bitbucket workspace?"
-- "What's the repository name?"
-
-**IMPORTANT:** Use the actual workspace/repo values in all subsequent commands. Never use literal strings `"workspace"` or `"repo"`.
+**IMPORTANT:** Use actual values in commands. Never use literal strings `"workspace"` or `"repo"`.
 
 ### Pattern 1: Find Latest Failing Pipeline
 
-**User Requests:**
-- "What's the latest failing pipeline?"
-- "Show me the most recent build failure"
-- "Find the last failed pipeline"
-
-**Steps:**
-1. Use helper function to get latest failed pipeline
-2. Extract and present key information
-
-**Command:**
 ```bash
 node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
   get-latest-failed "workspace" "repo"
 ```
 
-**Example Output:**
-```json
-{
-  "build_number": 123,
-  "state": { "name": "FAILED" },
-  "target": {
-    "ref_name": "main",
-    "commit": {
-      "hash": "abc123def",
-      "message": "Fix bug in deployment"
-    }
-  },
-  "created_on": "2025-11-02T10:30:00Z",
-  "uuid": "{pipeline-uuid}"
-}
-```
-
-**Present to User:**
+**Present to user:**
 ```
 Latest failed pipeline:
 - Pipeline #123
 - Branch: main
 - Commit: abc123d - "Fix bug in deployment"
 - Status: FAILED
-- Started: 2025-11-02 10:30 UTC
 ```
 
-### Pattern 2: Inspect Specific Pipeline by Number
+### Pattern 2: Download Logs for Failed Pipeline
 
-**User Requests:**
-- "Show me pipeline #34"
-- "Get details for build 34"
-- "What happened in pipeline 34?"
-
-**Steps:**
-1. Use helper to get pipeline by build number (auto-finds UUID)
-2. Get detailed info including all steps
-3. Present formatted output
-
-**Commands:**
 ```bash
-# Get pipeline by number
+# Step 1: Get pipeline by build number
 node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  get-by-number "workspace" "repo" 34
+  get-by-number "workspace" "repo" 123
 
-# Get full info with steps
+# Step 2: Download all failed step logs
 node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  get-info "workspace" "repo" "{pipeline-uuid}"
+  download-failed-logs "workspace" "repo" "{pipeline-uuid}" 123
 ```
 
-**Example Output:**
-```
-Pipeline #34 Details:
-- Status: FAILED
-- Branch: main
-- Commit: abc123d
-- Duration: 5m 30s
-
-Steps:
-1. Build (step 1/5) - ✅ SUCCESSFUL (1m 20s)
-2. Test (step 2/5) - ✅ SUCCESSFUL (2m 15s)
-3. Deploy (step 3/5) - ❌ FAILED (30s)
-4. Integration Tests (step 4/5) - ⏭️ SKIPPED
-5. Cleanup (step 5/5) - ⏭️ SKIPPED
-```
-
-### Pattern 3: Identify Which Steps Failed
-
-**User Requests:**
-- "Which steps failed?"
-- "What part of the build broke?"
-
-**Steps:**
-1. Get failed steps using helper function
-2. Display step names, status, and duration
-
-**Command:**
-```bash
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  get-failed-steps "workspace" "repo" "{pipeline-uuid}"
-```
-
-**Example Output:**
-```
-Failed Steps in Pipeline #34:
-
-1. Deploy (step 3/5)
-   - Status: FAILED
-   - Duration: 30s
-
-2. Integration Tests (step 4/5)
-   - Status: ERROR
-   - Duration: 2m 15s
-```
-
-### Pattern 4: Download Failing Steps Logs
-
-**User Requests:**
-- "Get logs for failed steps"
-- "Download the logs"
-- "Show me what went wrong"
-
-**Steps:**
-1. Use helper to download all failed step logs
-2. Logs are saved to `.pipeline-logs/` in current directory
-3. Present summary and file locations
-
-**Command:**
-```bash
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  download-failed-logs "workspace" "repo" "{pipeline-uuid}" 34
-```
-
-**Output:**
-```json
-[
-  {
-    "stepName": "Deploy",
-    "stepUuid": "{step-uuid}",
-    "logFilePath": "/path/to/project/.pipeline-logs/pipeline-34-Deploy.log",
-    "size": 12450,
-    "status": "FAILED"
-  }
-]
-```
-
-**Present to User:**
+**Present to user:**
 ```
 Downloaded logs for 2 failed steps:
 
 1. Deploy
-   - Saved to: .pipeline-logs/pipeline-34-Deploy.log
+   - Saved to: .pipeline-logs/pipeline-123-Deploy.log
    - Size: 12.4 KB
 
 2. Integration_Tests
-   - Saved to: .pipeline-logs/pipeline-34-Integration_Tests.log
+   - Saved to: .pipeline-logs/pipeline-123-Integration_Tests.log
    - Size: 45.2 KB
 ```
 
 **Important:** Check log file size before displaying. If > 50KB, show summary only:
 ```bash
-# Check file size
-ls -lh .pipeline-logs/pipeline-34-Deploy.log
-
-# Show last 100 lines (most relevant errors)
-tail -n 100 .pipeline-logs/pipeline-34-Deploy.log
-
-# Or search for errors
-grep -i "error\|failed\|exception" .pipeline-logs/pipeline-34-Deploy.log
+tail -n 100 .pipeline-logs/pipeline-123-Deploy.log
+grep -i "error\|failed\|exception" .pipeline-logs/pipeline-123-Deploy.log
 ```
 
-### Pattern 5: Download Specific Step Logs
+### Pattern 3: The DevOps REPL Loop (Full Debugging Workflow)
 
-**User Requests:**
-- "Get logs from the Deploy step"
-- "Download logs from step 3"
-- "Show me Deploy step logs"
-
-**Steps:**
-1. Get all pipeline steps
-2. Find step by name or position
-3. Download logs using CLI
-
-**Commands:**
-```bash
-# Get all steps
-node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
-  get-pipeline-steps "workspace" "repo" "{pipeline-uuid}"
-
-# Find step UUID (use jq or parse JSON in bash)
-# Then download logs
-node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
-  get-step-logs "workspace" "repo" "{pipeline-uuid}" "{step-uuid}" \
-  > .pipeline-logs/deploy-step.log
-```
-
-### Pattern 6: Analyze Large Logs
-
-**User Requests:**
-- "The log is too large"
-- "Summarize the errors"
-- Context window concerns
-
-**Steps:**
-1. Check log file size
-2. Extract relevant portions (errors, warnings)
-3. Present summary
-
-**Commands:**
-```bash
-# Check size
-size=$(wc -c < .pipeline-logs/pipeline-34-Deploy.log)
-echo "Log size: $size bytes"
-
-# Extract errors only
-grep -i "error\|fatal\|exception" .pipeline-logs/pipeline-34-Deploy.log > .pipeline-logs/errors-only.txt
-
-# Show last 200 lines (where failures typically occur)
-tail -n 200 .pipeline-logs/pipeline-34-Deploy.log
-
-# Count error types
-grep -i "error" .pipeline-logs/pipeline-34-Deploy.log | sort | uniq -c | sort -nr
-```
-
-### Pattern 7: List Available Pipeline Types
-
-**User Requests:**
-- "What pipelines can I run?"
-- "What can I trigger on this branch?"
-- "What pipeline types exist?"
-
-**Note:** Pipeline types are defined in `bitbucket-pipelines.yml` in the repository.
-
-**Steps:**
-1. Read bitbucket-pipelines.yml from repository root
-2. Parse pipeline definitions (default, custom, branches)
-3. List available options
-4. Optionally get branching model for branch strategy
-
-**Command to read pipeline config:**
-```bash
-# Use Read tool to read bitbucket-pipelines.yml
-# Parse YAML for:
-# - pipelines.default (runs on all branches)
-# - pipelines.branches.* (branch-specific)
-# - pipelines.custom.* (custom/manual pipelines)
-# - pipelines.pull-requests.* (PR pipelines)
-```
-
-**For branching strategy only:**
-```bash
-node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
-  get-branching-model "workspace" "repo"
-```
-
-**Present to User:**
-```
-Available Pipelines (from bitbucket-pipelines.yml):
-
-Default Pipeline:
-- Runs automatically on all branches
-
-Custom Pipelines:
-- deploy-production (manual trigger)
-- deploy-staging (manual trigger)
-- run-tests (manual trigger)
-
-Branch-Specific:
-- main: Production deployment pipeline
-- develop: Development pipeline
-
-To trigger a custom pipeline, use Pattern 8 with the pipeline name.
-```
-
-### Pattern 8: Trigger Pipeline Run
-
-**User Requests:**
-- "Run the pipeline on main"
-- "Start pipeline X on branch Y"
-- "Trigger deploy-production"
-
-**Steps:**
-1. Confirm with user: branch, pipeline type, variables
-2. Use CLI to trigger pipeline
-3. Display result with URL and build number
-4. Optionally monitor progress (see Pattern 9)
-
-**Command:**
-```bash
-# Trigger default pipeline
-node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
-  run-pipeline "workspace" "repo" "main"
-
-# Trigger custom pipeline
-node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
-  run-pipeline "workspace" "repo" "main" "deploy-production"
-```
-
-**Example Output:**
-```
-Triggering Pipeline:
-- Branch: main
-- Pipeline: deploy-production
-- Variables:
-  - ENVIRONMENT=prod
-  - DRY_RUN=false
-
-✓ Pipeline started: #456
-URL: https://bitbucket.org/workspace/repo/pipelines/results/456
-Status: IN_PROGRESS
-```
-
-### Pattern 9: Monitor Running Pipeline
-
-**User Requests:**
-- "Monitor pipeline #456"
-- "Watch the current build"
-- "Is the build done yet?"
-- "Track the pipeline progress"
-
-**Steps:**
-1. Get current pipeline status
-2. Check if RUNNING/IN_PROGRESS
-3. Show current step if running
-4. Check again after delay if needed
-5. Report when complete with final status
-
-**Command:**
-```bash
-# Get current status
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  get-by-number "workspace" "repo" 456
-```
-
-**Parse Response:**
-```json
-{
-  "state": {
-    "name": "IN_PROGRESS",  // or "COMPLETED"
-    "result": {
-      "name": "SUCCESSFUL"  // Only when COMPLETED: SUCCESSFUL/FAILED/STOPPED
-    }
-  },
-  "build_number": 456
-}
-```
-
-**Present to User:**
-```
-Pipeline #456 Status:
-
-Current State: IN_PROGRESS
-Branch: main
-Started: 5 minutes ago
-Current Step: Deploy (step 3/5)
-
-[Wait 30 seconds and check again...]
-
---- After completion ---
-✓ Pipeline #456 COMPLETED
-Result: SUCCESSFUL
-Duration: 8m 32s
-```
-
-**Monitoring Loop:**
-- If IN_PROGRESS: Wait 30-60 seconds, check again
-- If COMPLETED: Report final result (SUCCESSFUL/FAILED/STOPPED)
-- If FAILED: Offer to download logs (Pattern 4)
-
-### Pattern 10: The DevOps REPL Loop (Full Debugging Workflow)
-
-**User Requests:**
-- "Fix the failing build"
-- "Debug this pipeline and fix it"
-- "Help me get this build green"
-- "Why is my build failing?"
-
-**This is the complete observe-analyze-fix loop that makes DevOps interactive:**
+**User: "Fix the failing build"**
 
 **1. READ - Find and Analyze Failure:**
 ```bash
-# Step 1a: Get latest failed pipeline
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  get-latest-failed "workspace" "repo"
-
-# Step 1b: Get failed steps
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  get-failed-steps "workspace" "repo" "{pipeline-uuid}"
-
-# Step 1c: Download failed logs
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  download-failed-logs "workspace" "repo" "{pipeline-uuid}" <build-number>
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-latest-failed "workspace" "repo"
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-failed-steps "workspace" "repo" "{uuid}"
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js download-failed-logs "workspace" "repo" "{uuid}" 123
 ```
 
 **2. EVAL - Analyze the Logs:**
 ```bash
-# Extract errors from logs
 grep -i "error\|failed\|exception\|fatal" .pipeline-logs/*.log
-
-# Show context around errors (5 lines before/after)
 grep -i -A 5 -B 5 "error" .pipeline-logs/pipeline-*.log
-
-# Analyze the error:
-# - What type of error? (compilation, test failure, deployment, etc.)
-# - What file/line number?
-# - What's the root cause?
 ```
 
 **3. PRINT - Suggest Fix:**
-Present findings to user:
 ```
 Found the issue in Pipeline #123:
 
@@ -682,42 +309,42 @@ Should I apply this fix?
 
 **4. LOOP - Apply Fix and Re-Test:**
 ```bash
-# If user approves:
-# Step 4a: Apply fix using Edit tool
-# Edit src/auth/service.ts and make the change
-
-# Step 4b: Optionally commit
+# Apply fix using Edit tool
+# Commit changes
 git add src/auth/service.ts
 git commit -m "Fix: Update User property reference from userId to id"
 
-# Step 4c: Trigger new pipeline run
+# Trigger new pipeline run
 node ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/index-cli.js \
   run-pipeline "workspace" "repo" "branch-name"
 
-# Step 4d: Monitor the new build (Pattern 9)
-node ~/.claude/skills/bitbucket-devops/lib/helpers.js \
-  get-by-number "workspace" "repo" <new-build-number>
+# Monitor the new build
+node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-by-number "workspace" "repo" <new-build-number>
 ```
 
 **5. REPEAT or CELEBRATE:**
-- If new build FAILS: Go back to step 1 (READ) with new logs
+- If new build FAILS: Go back to step 1 with new logs
 - If new build SUCCEEDS: ✅ Success! Build is green
-- If new build IN_PROGRESS: Monitor (Pattern 9)
-
-**Key Points:**
-- **Stay in the loop** until build passes
-- **Learn from patterns** across iterations
-- **Keep user informed** at each step
-- **Ask permission** before making code changes
-- **Track progress** - "Attempt 1 failed, trying fix 2..."
+- If new build IN_PROGRESS: Monitor with Pattern 9
 
 **This transforms hours of manual debugging into minutes of AI-assisted iteration.**
+
+---
+
+## Complete Documentation
+
+For comprehensive coverage, refer to these detailed guides:
+
+- **[docs/REFERENCE.md](docs/REFERENCE.md)** - Complete command reference for all Tier 1, 2, and 3 operations
+- **[docs/PATTERNS.md](docs/PATTERNS.md)** - All 11 usage patterns with detailed examples and bash scripts
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common errors, diagnostic commands, and solutions
+- **[docs/GIT_OPERATIONS.md](docs/GIT_OPERATIONS.md)** - Credential requirements for API vs git operations
+
+---
 
 ## Log Storage
 
 Logs are downloaded to `.pipeline-logs/` in the directory where VSCode is opened (your working directory).
-
-**Path:** `.pipeline-logs/` relative to `process.cwd()` when commands execute
 
 **Structure:**
 ```
@@ -736,63 +363,34 @@ Logs are downloaded to `.pipeline-logs/` in the directory where VSCode is opened
 - Tell user to add `.pipeline-logs/` to their project's `.gitignore`
 - Logs persist across sessions for easy reference
 
-## Error Handling
+---
 
-Common issues and solutions:
+## Common Errors (Quick Reference)
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| "Pipeline not found" | Build number too old | Increase search limit or use recent pipelines |
+| "Pipeline not found" | Build number too old | Use `get-latest-failed` instead |
 | "Logs unavailable" | Pipeline still running | Wait for completion |
-| "No credential file found" | Missing credentials.json | Create from template |
+| "No credential file found" | Missing credentials.json | Copy from credentials.json.template |
 | "Node.js not found" | Node not installed | Install Node.js v18+ |
-| "Submodule not initialized" | Git submodule missing | Run install script |
+| "Submodule not initialized" | Git submodule missing | Run `bash install.sh` |
+| "401 Unauthorized" | Wrong credentials | Check user_email (not username) in credentials.json |
+| "Git auth failed" | Wrong username | Check username (not email) for git operations |
+
+**For detailed troubleshooting:** See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+
+---
 
 ## Best Practices
 
-1. **Always confirm workspace/repo**: Auto-detect from git or ask user:
-   ```bash
-   git config --get remote.origin.url
-   # Parse: git@bitbucket.org:workspace/repo.git
-   ```
+1. **Always confirm workspace/repo** - Auto-detect from git or ask user
+2. **Check pipeline status before logs** - Don't request logs for running pipelines
+3. **Limit initial results** - Start with 10 recent pipelines, increase if needed
+4. **Smart log filtering** - Use grep to find errors first
+5. **Cache results** - Store JSON responses in variables to avoid redundant calls
+6. **Use helper functions** - Prefer Tier 1 helpers for common operations
 
-2. **Check pipeline status before logs**: Don't request logs for running pipelines
-
-3. **Limit initial results**: Start with 10 recent pipelines, increase if needed
-
-4. **Smart log filtering**: Use grep to find errors first:
-   ```bash
-   grep -n "ERROR\|FATAL\|Exception" logfile.log
-   ```
-
-5. **Cache results**: Store JSON responses in variables to avoid redundant calls
-
-6. **Use helper functions**: Prefer helpers.js functions for common operations
-
-## Workspace Detection
-
-Auto-detect repository information:
-
-```bash
-# Get git remote URL
-git_url=$(git config --get remote.origin.url 2>/dev/null)
-
-# Parse workspace and repo from: git@bitbucket.org:workspace/repo.git
-if [[ "$git_url" =~ bitbucket.org[:/]([^/]+)/([^/.]+) ]]; then
-  workspace="${BASH_REMATCH[1]}"
-  repo_slug="${BASH_REMATCH[2]}"
-  echo "Detected: $workspace/$repo_slug"
-fi
-```
-
-## Configuration Variables
-
-Default values (can be adjusted per request):
-
-- **Max Pipeline Limit**: 50 (for searching by build number)
-- **Recent Pipeline Limit**: 10 (for listing)
-- **Log Directory**: `.pipeline-logs/` (relative to cwd)
-- **Large Log Threshold**: 50KB (when to summarize)
+---
 
 ## Performance Notes
 
@@ -801,64 +399,7 @@ Default values (can be adjusted per request):
 - **Credential caching**: Loaded once per invocation
 - **Bitbucket rate limits**: 60 requests/hour per user (standard tier)
 
-## Troubleshooting
-
-### Helper Functions Not Working
-
-```bash
-# Check if skill directory exists
-ls -la ~/.claude/skills/bitbucket-devops/
-
-# Check if submodule is initialized
-ls -la ~/.claude/skills/bitbucket-devops/bitbucket-mcp/dist/
-
-# If missing, run install script
-cd ~/.claude/skills/bitbucket-devops/
-bash install.sh
-```
-
-### ✨ Smart Pipeline Identifiers
-
-**FEATURE:** Pipeline commands now automatically accept both build numbers AND UUIDs!
-
-✅ **Use build number directly:**
-```bash
-get-pipeline-steps workspace repo 60
-# Output: 🔍 Detected build number 60, looking up UUID...
-#         ✓ Found UUID: {63bac81c-165b-41bd-bc58-26445567a332}
-#         [returns pipeline steps]
-```
-
-✅ **Or use UUID directly:**
-```bash
-get-pipeline-steps workspace repo {63bac81c-165b-41bd-bc58-26445567a332}
-# Output: [returns pipeline steps immediately]
-```
-
-**How it works:**
-- Detects if input is a number → treats as build number, looks up UUID
-- Detects if input contains `{` or `-` → treats as UUID
-- Searches recent 100 pipelines when converting build numbers
-- Shows helpful feedback during conversion
-
-**No more "400 Bad Request" errors from using build numbers!** 🎉
-
-### UUID Encoding
-
-Bitbucket UUIDs contain curly braces `{uuid}`. The CLI handles encoding automatically.
-
-### JSON Parsing in Bash
-
-Use `node -e` or `jq` for parsing JSON responses:
-
-```bash
-# With jq
-result=$(node ~/.claude/skills/bitbucket-devops/lib/helpers.js get-latest "workspace" "repo")
-build_number=$(echo "$result" | jq -r '.build_number')
-
-# With node
-build_number=$(node -e "const data = $(cat result.json); console.log(data.build_number)")
-```
+---
 
 ## Credits
 

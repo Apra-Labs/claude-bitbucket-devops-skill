@@ -181,9 +181,30 @@ else
 
     # Create skills directory if needed
     mkdir -p "$(dirname "$TARGET_DIR")"
+    mkdir -p "$TARGET_DIR"
 
-    # Copy repository to target (including built dist/)
-    cp -r "$SCRIPT_DIR" "$TARGET_DIR"
+    # Copy only files needed by Claude (selective copy)
+    echo "   Copying SKILL.md..."
+    cp "$SCRIPT_DIR/SKILL.md" "$TARGET_DIR/"
+
+    echo "   Copying credentials template..."
+    cp "$SCRIPT_DIR/credentials.json.template" "$TARGET_DIR/"
+
+    echo "   Copying lib/ (helper scripts)..."
+    cp -r "$SCRIPT_DIR/lib" "$TARGET_DIR/"
+
+    echo "   Copying docs/ (referenced documentation)..."
+    mkdir -p "$TARGET_DIR/docs"
+    cp "$SCRIPT_DIR/docs/REFERENCE.md" "$TARGET_DIR/docs/"
+    cp "$SCRIPT_DIR/docs/PATTERNS.md" "$TARGET_DIR/docs/"
+    cp "$SCRIPT_DIR/docs/TROUBLESHOOTING.md" "$TARGET_DIR/docs/"
+    cp "$SCRIPT_DIR/docs/GIT_OPERATIONS.md" "$TARGET_DIR/docs/"
+    cp -r "$SCRIPT_DIR/docs/bitbucket-api" "$TARGET_DIR/docs/"
+
+    echo "   Copying bitbucket-mcp/ (CLI and API docs)..."
+    mkdir -p "$TARGET_DIR/bitbucket-mcp"
+    cp -r "$SCRIPT_DIR/bitbucket-mcp/dist" "$TARGET_DIR/bitbucket-mcp/"
+    cp -r "$SCRIPT_DIR/bitbucket-mcp/docs" "$TARGET_DIR/bitbucket-mcp/"
 
     echo "✓ Files copied to $TARGET_DIR"
 
