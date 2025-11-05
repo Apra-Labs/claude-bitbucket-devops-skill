@@ -190,6 +190,9 @@ else
     echo "   Copying credentials template..."
     cp "$SCRIPT_DIR/credentials.json.template" "$TARGET_DIR/"
 
+    echo "   Copying package.json (required for ES modules)..."
+    cp "$SCRIPT_DIR/package.json" "$TARGET_DIR/"
+
     echo "   Copying lib/ (helper scripts)..."
     cp -r "$SCRIPT_DIR/lib" "$TARGET_DIR/"
 
@@ -204,6 +207,8 @@ else
     echo "   Copying bitbucket-mcp/ (built CLI)..."
     mkdir -p "$TARGET_DIR/bitbucket-mcp"
     cp -r "$SCRIPT_DIR/bitbucket-mcp/dist" "$TARGET_DIR/bitbucket-mcp/"
+    cp -r "$SCRIPT_DIR/bitbucket-mcp/node_modules" "$TARGET_DIR/bitbucket-mcp/"
+    cp "$SCRIPT_DIR/bitbucket-mcp/package.json" "$TARGET_DIR/bitbucket-mcp/"
 
     echo "✓ Files copied to $TARGET_DIR"
 
@@ -237,6 +242,29 @@ echo ""
 # ========== COMPLETION ==========
 
 echo "✅ Installation complete!"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# ========== VALIDATION ==========
+
+echo "🔬 Running validation tests..."
+echo ""
+
+# Run smoke test if available
+if [ -f "$SCRIPT_DIR/smoke-test.sh" ]; then
+    if bash "$SCRIPT_DIR/smoke-test.sh" "$TARGET_DIR"; then
+        echo ""
+        echo "✓ All validation tests passed!"
+    else
+        echo ""
+        echo "⚠️  Some validation tests failed - please review output above"
+        echo "   Installation may still work, but please verify manually"
+    fi
+else
+    echo "⚠️  smoke-test.sh not found - skipping validation"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

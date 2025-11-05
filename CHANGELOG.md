@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-11-04
+
+### Fixed
+- **Critical**: Fixed install.sh missing dependencies after deployment
+  - Now copies `node_modules/` directory from bitbucket-mcp (contains axios and other dependencies)
+  - Now copies `package.json` from bitbucket-mcp (enables module resolution)
+  - Now copies root `package.json` (enables ES module support for lib/helpers.js)
+  - Previously only copied `dist/` folder, causing "Cannot find package 'axios'" errors
+
+### Impact
+- Users who installed v1.2.0 or earlier would encounter `ERR_MODULE_NOT_FOUND` errors
+- This fix ensures all required dependencies are available in the deployed skill directory
+- No reinstallation required if already working - only affects fresh installs
+
 ## [1.2.0] - 2025-11-04
 
 ### 🎯 Major Refactoring: Credential Field Clarity + Git Operations Support

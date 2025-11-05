@@ -2,6 +2,35 @@
 
 Before publishing this skill publicly, follow this testing checklist.
 
+## Smoke Test (Quick Validation)
+
+After making any changes to the skill, run the smoke test to ensure basic functionality:
+
+```bash
+# Run smoke test on deployed skill
+bash smoke-test.sh
+
+# Or test a specific directory
+bash smoke-test.sh ~/.claude/skills/bitbucket-devops
+```
+
+The smoke test validates:
+- ✅ File structure is correct
+- ✅ Dependencies are installed (node_modules, axios, etc.)
+- ✅ package.json files are present and configured
+- ✅ ES modules can be imported
+- ✅ CLI tool is executable
+- ✅ Credentials template exists
+
+**Run smoke test after:**
+- Installing or updating the skill
+- Making changes to install.sh
+- Modifying lib/helpers.js or CLI tools
+- Before committing major changes
+- Before creating a release
+
+Expected output: All tests should pass (green checkmarks).
+
 ## Pre-Test Setup
 
 ### 1. Verify No Credentials in Repository
